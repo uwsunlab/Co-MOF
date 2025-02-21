@@ -29,6 +29,7 @@ class MofImageAnalysis:
 def grayscale_image(image):
     # Convert image to grayscale
     image = image.convert('L')
+    # cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
     
     # Turn image to np.array type and ensure it is uint8
     image_array = np.asarray(image).astype(np.uint8)
