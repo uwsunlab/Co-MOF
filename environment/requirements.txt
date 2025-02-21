@@ -1,0 +1,8 @@
+numpy
+mahotas
+opencv-python
+scikit-image
+pandas
+matplotlib
+
+jupyterlab
