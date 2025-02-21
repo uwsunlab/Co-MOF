@@ -28,23 +28,26 @@ class MofImageAnalysis:
 # Updated image_processing function to ensure the correct data type
 def grayscale_image(image):
     # Convert image to grayscale
-    # image = image.convert('L')
+    image = image.convert('L')
     
     # Turn image to np.array type and ensure it is uint8
     image_array = np.asarray(image).astype(np.uint8)
     return image_array
 
 # Function to apply Otsu and RC thresholding using Mahotas and return the binary images
-def apply_mahotas_thresholding(im_gray):
+def apply_otsu_thresholding(im_gray):
     # Otsu thresholding with Mahotas
     otsu_thresh = mh.otsu(im_gray)
     bin_otsu = im_gray > otsu_thresh
     
+    return otsu_thresh, bin_otsu
+
+def apply_rc_thresholding(im_gray):
     # RC thresholding with Mahotas
     rc_thresh = mh.rc(im_gray)
     bin_rc = im_gray > rc_thresh
     
-    return otsu_thresh, bin_otsu, rc_thresh, bin_rc
+    return rc_thresh, bin_rc
 
 # Display function to show the binary images with threshold values on histogram
 def display_binary_images_with_histogram(im_gray, otsu_thresh, bin_otsu, rc_thresh, bin_rc):
@@ -52,19 +55,19 @@ def display_binary_images_with_histogram(im_gray, otsu_thresh, bin_otsu, rc_thre
 
     # Plot histogram with Otsu and RC thresholds
     ax[0, 0].hist(im_gray.ravel(), bins=255, color='gray')
-    ax[0, 0].axvline(otsu_thresh, color='blue', linestyle='--', label=f'Otsu Threshold: {otsu_thresh}')
-    ax[0, 0].axvline(rc_thresh, color='red', linestyle='--', label=f'RC Threshold: {rc_thresh}')
+    ax[0, 0].axvline(otsu_thresh, color='blue', linestyle='--', label=f'Otsu Threshold: {otsu_thresh:.2f}')
+    ax[0, 0].axvline(rc_thresh, color='red', linestyle='--', label=f'RC Threshold: {rc_thresh:.2f}')
     ax[0, 0].set_title('Histogram with Thresholds')
     ax[0, 0].legend()
 
     # Display Otsu threshold binary image
     ax[0, 1].imshow(bin_otsu, cmap='gray')
-    ax[0, 1].set_title(f'Otsu Threshold Binary Image (Threshold: {otsu_thresh})')
+    ax[0, 1].set_title(f'Otsu Threshold Binary Image (Threshold: {otsu_thresh:.2f})')
     ax[0, 1].axis('off')
 
     # Display RC threshold binary image
     ax[1, 0].imshow(bin_rc, cmap='gray')
-    ax[1, 0].set_title(f'RC Threshold Binary Image (Threshold: {rc_thresh})')
+    ax[1, 0].set_title(f'RC Threshold Binary Image (Threshold: {rc_thresh:.2f})')
     ax[1, 0].axis('off')
 
     # Display original grayscale image for reference
