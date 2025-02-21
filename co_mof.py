@@ -5,19 +5,30 @@ import cv2
 from skimage import measure
 from skimage.draw import polygon
 from skimage.morphology import convex_hull_image
+from PIL import Image  # TODO: probably don't need this dependency
 
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import gaussian_kde
 
 import pandas as pd
-from IPython.display import display
 
+
+class MofImageAnalysis:
+    def __init__(self, image_path):
+        self.image_path = image_path
+        self.image = self.preprocess_image(self.load_image())
+        
+    def load_image(self):
+        return Image.open(self.image_path)
+    
+    def preprocess_image(self):
+        self.image = grayscale_image(self.image)
 
 # Updated image_processing function to ensure the correct data type
-def image_processing(image, max_height, max_width):
+def grayscale_image(image):
     # Convert image to grayscale
-    image = image.convert('L')
+    # image = image.convert('L')
     
     # Turn image to np.array type and ensure it is uint8
     image_array = np.asarray(image).astype(np.uint8)
