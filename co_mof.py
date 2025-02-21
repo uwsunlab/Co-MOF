@@ -155,7 +155,7 @@ def overlay_horizontal_lines(binary_image, combined_lines):
     return overlay_image, longest_line
 
 # Function to display the overlay
-def display_overlay(overlay_image):
+def display_overlay(overlay_image):  # TODO: Not sure that this function is needed / is incomplete
     plt.figure(figsize=(8, 8))
     plt.imshow(overlay_image)
     plt.title('Binary Image with Combined Horizontal Lines (Longest in Red, Points Highlighted)')
@@ -197,7 +197,7 @@ def display_rc_closing_results(im_gray, rc_thresh, bin_rc, closed_image):
 
 # New Code Block
 
-def is_contour_enclosing_white_region(contour, image):
+def is_contour_enclosing_white_region(contour, image):  # TODO: rename to avoid using ambiguous colors
     """Check if a contour is enclosing a white region."""
     # Create a mask for the contour
     mask = np.zeros(image.shape, dtype=bool)
@@ -234,7 +234,7 @@ def filter_and_remove_white_region_contours(closing, contours):
 
 
 # Function to display the image and the detected contours
-def display_contours(closing, contours):
+def display_contours(closing, contours):  # TODO: closing is very vague for parameter name
     """Display the image with detected contours overlaid."""
     
     fig, ax = plt.subplots(figsize=(8, 8))
