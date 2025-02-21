@@ -5,7 +5,6 @@ import cv2
 from skimage import measure
 from skimage.draw import polygon
 from skimage.morphology import convex_hull_image
-from PIL import Image  # TODO: probably don't need this dependency
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,7 +19,7 @@ class MofImageAnalysis:
         self.preprocess_image(self.load_image())
         
     def load_image(self):
-        return Image.open(self.image_path)
+        return load_rgb_image(self.image_path)
     
     def preprocess_image(self):
         self.image = grayscale_image(self.image)
