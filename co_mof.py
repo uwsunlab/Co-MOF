@@ -25,15 +25,14 @@ class MofImageAnalysis:
     def preprocess_image(self):
         self.image = grayscale_image(self.image)
 
+def load_rgb_image(image_path):
+    return cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
+
 # Updated image_processing function to ensure the correct data type
 def grayscale_image(image):
     # Convert image to grayscale
-    image = image.convert('L')
-    # cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-    
-    # Turn image to np.array type and ensure it is uint8
-    image_array = np.asarray(image).astype(np.uint8)
-    return image_array
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    return image.astype(np.uint8)
 
 # Function to apply Otsu and RC thresholding using Mahotas and return the binary images
 def apply_otsu_thresholding(im_gray):
