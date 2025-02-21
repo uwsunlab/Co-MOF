@@ -17,7 +17,7 @@ import pandas as pd
 class MofImageAnalysis:
     def __init__(self, image_path):
         self.image_path = image_path
-        self.image = self.preprocess_image(self.load_image())
+        self.preprocess_image(self.load_image())
         
     def load_image(self):
         return Image.open(self.image_path)
@@ -38,15 +38,13 @@ def grayscale_image(image):
 def apply_otsu_thresholding(im_gray):
     # Otsu thresholding with Mahotas
     otsu_thresh = mh.otsu(im_gray)
-    bin_otsu = im_gray > otsu_thresh
-    
+    bin_otsu = im_gray > otsu_thresh  # binary image
     return otsu_thresh, bin_otsu
 
 def apply_rc_thresholding(im_gray):
     # RC thresholding with Mahotas
     rc_thresh = mh.rc(im_gray)
-    bin_rc = im_gray > rc_thresh
-    
+    bin_rc = im_gray > rc_thresh  # binary image
     return rc_thresh, bin_rc
 
 # Display function to show the binary images with threshold values on histogram
@@ -166,13 +164,6 @@ def display_overlay(overlay_image):
 
 
 # New Code Block
-
-# Function to apply RC thresholding and return binary images
-def apply_rc_thresholding(im_gray):
-    # RC thresholding with Mahotas
-    rc_thresh = mh.rc(im_gray)
-    bin_rc = im_gray > rc_thresh
-    return rc_thresh, bin_rc
 
 # Function to apply morphological closing
 def apply_morphological_closing(bin_image):
