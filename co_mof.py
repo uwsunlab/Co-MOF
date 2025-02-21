@@ -25,17 +25,17 @@ class MofImageAnalysis:
     def preprocess_image(self):
         self.image = grayscale_image(self.image)
 
+def load_rgb_image(image_path):
+    return cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
+
 # Updated image_processing function to ensure the correct data type
 def grayscale_image(image):
     # Convert image to grayscale
-    image = image.convert('L')
-    # cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-    
-    # Turn image to np.array type and ensure it is uint8
-    image_array = np.asarray(image).astype(np.uint8)
-    return image_array
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    return image.astype(np.uint8)
 
 # Function to apply Otsu and RC thresholding using Mahotas and return the binary images
+# DEPRECATED: not used in favor of RC thresholding
 def apply_otsu_thresholding(im_gray):
     # Otsu thresholding with Mahotas
     otsu_thresh = mh.otsu(im_gray)
@@ -49,6 +49,7 @@ def apply_rc_thresholding(im_gray):
     return rc_thresh, bin_rc
 
 # Display function to show the binary images with threshold values on histogram
+# DEPRECATED
 def display_binary_images_with_histogram(im_gray, otsu_thresh, bin_otsu, rc_thresh, bin_rc):
     fig, ax = plt.subplots(2, 2, figsize=(12, 10))
 
