@@ -4,5 +4,6 @@ opencv-python
 scikit-image
 pandas
 matplotlib
+easyocr
 
 jupyterlab

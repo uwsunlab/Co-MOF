@@ -47,6 +47,20 @@ def apply_rc_thresholding(im_gray):
     bin_rc = im_gray > rc_thresh  # binary image
     return rc_thresh, bin_rc
 
+def get_distance_per_pixel_using_longest_contour(rc_mask):
+    # Detect all contours in the binary image using skimage
+    contours = measure.find_contours(rc_mask, level=0.8)
+
+    # Detect horizontal lines in contours
+    horizontal_lines = detect_horizontal_lines(contours)
+
+    # Combine horizontal lines that are close to each other
+    combined_lines = combine_close_lines(horizontal_lines, pixel_tolerance=5)
+
+    # Overlay combined horizontal lines on the binary image and highlight the longest in red
+    overlay_image, longest_line = overlay_horizontal_lines(rc_mask, combined_lines)
+
+
 # Display function to show the binary images with threshold values on histogram
 # DEPRECATED
 def display_binary_images_with_histogram(im_gray, otsu_thresh, bin_otsu, rc_thresh, bin_rc):
@@ -145,13 +159,13 @@ def overlay_horizontal_lines(binary_image, combined_lines):
         cv2.line(overlay_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 3)  # Red line
 
         # Plot starting and ending points of the longest line
-        cv2.circle(overlay_image, (int(x1), int(y1)), 5, (255, 0, 0), -1)  # Start point in blue
-        cv2.circle(overlay_image, (int(x2), int(y2)), 5, (255, 0, 0), -1)  # End point in yellow
+        cv2.circle(overlay_image, (int(x1), int(y1)), 15, (255, 0, 0), -1)  # Start point in red
+        cv2.circle(overlay_image, (int(x2), int(y2)), 15, (0, 0, 255), -1)  # End point in blue
 
     # Draw all other combined lines in green
     for (x1, y1, x2, y2) in combined_lines:
         if (x1, y1, x2, y2) != longest_line:
-            cv2.line(overlay_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)  # Green lines
+            cv2.line(overlay_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 3)  # Green lines
 
     return overlay_image, longest_line
 
