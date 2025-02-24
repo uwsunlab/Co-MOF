@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
-from co_mof import load_rgb_image
+from co_mof_image_utils import load_rgb_image
 
 
 class ScaleBarDetector:

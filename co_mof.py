@@ -1,5 +1,4 @@
 import numpy as np
-import mahotas as mh
 import matplotlib.pyplot as plt
 import cv2
 from skimage import measure
@@ -12,11 +11,15 @@ from scipy.stats import gaussian_kde
 
 import pandas as pd
 
+from co_mof_ocr import ScaleBarDetector
+from co_mof_image_utils import load_rgb_image, grayscale_image
+
 
 class MofImageAnalysis:
     def __init__(self, image_path):
         self.image_path = image_path
         self.preprocess_image(self.load_image())
+        self.scale_bar = ScaleBarDetector(self.image_path)
         
     def load_image(self):
         return load_rgb_image(self.image_path)
@@ -24,161 +27,9 @@ class MofImageAnalysis:
     def preprocess_image(self):
         self.image = grayscale_image(self.image)
 
-def load_rgb_image(image_path):
-    return cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
-
-# Updated image_processing function to ensure the correct data type
-def grayscale_image(image):
-    # Convert image to grayscale
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    return image.astype(np.uint8)
-
-# Function to apply Otsu and RC thresholding using Mahotas and return the binary images
-# DEPRECATED: not used in favor of RC thresholding
-def apply_otsu_thresholding(im_gray):
-    # Otsu thresholding with Mahotas
-    otsu_thresh = mh.otsu(im_gray)
-    bin_otsu = im_gray > otsu_thresh  # binary image
-    return otsu_thresh, bin_otsu
-
-def apply_rc_thresholding(im_gray):
-    # RC thresholding with Mahotas
-    rc_thresh = mh.rc(im_gray)
-    bin_rc = im_gray > rc_thresh  # binary image
-    return rc_thresh, bin_rc
-
-def get_distance_per_pixel_using_longest_contour(rc_mask):
-    # Detect all contours in the binary image using skimage
-    contours = measure.find_contours(rc_mask, level=0.8)
-
-    # Detect horizontal lines in contours
-    horizontal_lines = detect_horizontal_lines(contours)
-
-    # Combine horizontal lines that are close to each other
-    combined_lines = combine_close_lines(horizontal_lines, pixel_tolerance=5)
-
-    # Overlay combined horizontal lines on the binary image and highlight the longest in red
-    overlay_image, longest_line = overlay_horizontal_lines(rc_mask, combined_lines)
 
 
-# Display function to show the binary images with threshold values on histogram
-# DEPRECATED
-def display_binary_images_with_histogram(im_gray, otsu_thresh, bin_otsu, rc_thresh, bin_rc):
-    fig, ax = plt.subplots(2, 2, figsize=(12, 10))
-
-    # Plot histogram with Otsu and RC thresholds
-    ax[0, 0].hist(im_gray.ravel(), bins=255, color='gray')
-    ax[0, 0].axvline(otsu_thresh, color='blue', linestyle='--', label=f'Otsu Threshold: {otsu_thresh:.2f}')
-    ax[0, 0].axvline(rc_thresh, color='red', linestyle='--', label=f'RC Threshold: {rc_thresh:.2f}')
-    ax[0, 0].set_title('Histogram with Thresholds')
-    ax[0, 0].legend()
-
-    # Display Otsu threshold binary image
-    ax[0, 1].imshow(bin_otsu, cmap='gray')
-    ax[0, 1].set_title(f'Otsu Threshold Binary Image (Threshold: {otsu_thresh:.2f})')
-    ax[0, 1].axis('off')
-
-    # Display RC threshold binary image
-    ax[1, 0].imshow(bin_rc, cmap='gray')
-    ax[1, 0].set_title(f'RC Threshold Binary Image (Threshold: {rc_thresh:.2f})')
-    ax[1, 0].axis('off')
-
-    # Display original grayscale image for reference
-    ax[1, 1].imshow(im_gray, cmap='gray')
-    ax[1, 1].set_title('Original Grayscale Image')
-    ax[1, 1].axis('off')
-
-    plt.tight_layout()
-    plt.show()
     
-# New Code Block    
-
-# Function to detect horizontal straight lines for every contour
-def detect_horizontal_lines(contours, slope_tolerance=0.01):
-    horizontal_lines = []
-
-    # Iterate through contours
-    for idx, contour in enumerate(contours):
-        # Contour points
-        x_coords, y_coords = contour[:, 1], contour[:, 0]
-
-        # Pairwise line segments
-        for i in range(len(x_coords) - 1):
-            x1, y1 = x_coords[i], y_coords[i]
-            x2, y2 = x_coords[i + 1], y_coords[i + 1]
-
-            # Avoid division by zero and compute slope
-            if abs(x2 - x1) > 1e-6:
-                slope = (y2 - y1) / (x2 - x1)
-            else:
-                slope = np.inf
-
-            # Check if the line is horizontal (slope close to 0)
-            if abs(slope) <= slope_tolerance:
-                horizontal_lines.append(((x1, y1), (x2, y2)))
-
-    return horizontal_lines
-
-# Function to combine horizontal lines that are within 5 pixels
-def combine_close_lines(horizontal_lines, pixel_tolerance=5):
-    combined_lines = []
-
-    # Sort lines by their starting y-coordinate
-    horizontal_lines.sort(key=lambda line: line[0][1])
-
-    for line in horizontal_lines:
-        x1, y1, x2, y2 = *line[0], *line[1]
-
-        if not combined_lines:
-            combined_lines.append((x1, y1, x2, y2))
-        else:
-            # Check proximity with the last combined line
-            cx1, cy1, cx2, cy2 = combined_lines[-1]
-
-            if abs(y1 - cy1) <= pixel_tolerance and (min(x2, cx2) - max(x1, cx1)) >= -pixel_tolerance:
-                # Merge lines if they are close
-                combined_lines[-1] = (min(x1, cx1), min(y1, cy1), max(x2, cx2), max(y2, cy2))
-            else:
-                # Otherwise, add as a new line
-                combined_lines.append((x1, y1, x2, y2))
-
-    return combined_lines
-
-# Function to overlay combined horizontal lines and highlight the longest in red
-def overlay_horizontal_lines(binary_image, combined_lines):
-    # Convert binary image to a 3-channel image for visualization
-    overlay_image = np.dstack([binary_image * 255] * 3).astype(np.uint8)
-
-    # Find the longest line
-    longest_line = None
-    if combined_lines:
-        longest_line = max(combined_lines, key=lambda line: np.sqrt((line[2] - line[0])**2 + (line[3] - line[1])**2))
-        (x1, y1, x2, y2) = longest_line
-
-        # Highlight the longest line in red
-        cv2.line(overlay_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 3)  # Red line
-
-        # Plot starting and ending points of the longest line
-        cv2.circle(overlay_image, (int(x1), int(y1)), 15, (255, 0, 0), -1)  # Start point in red
-        cv2.circle(overlay_image, (int(x2), int(y2)), 15, (0, 0, 255), -1)  # End point in blue
-
-    # Draw all other combined lines in green
-    for (x1, y1, x2, y2) in combined_lines:
-        if (x1, y1, x2, y2) != longest_line:
-            cv2.line(overlay_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 3)  # Green lines
-
-    return overlay_image, longest_line
-
-# Function to display the overlay
-def display_overlay(overlay_image):  # TODO: Not sure that this function is needed / is incomplete
-    plt.figure(figsize=(8, 8))
-    plt.imshow(overlay_image)
-    plt.title('Binary Image with Combined Horizontal Lines (Longest in Red, Points Highlighted)')
-    plt.axis('off')
-    plt.show()
-
-
-# New Code Block
 
 # Function to apply morphological closing
 def apply_morphological_closing(bin_image):
@@ -199,7 +50,7 @@ def display_rc_closing_results(im_gray, rc_thresh, bin_rc, closed_image):
 
     # Display RC threshold binary image
     ax[1].imshow(bin_rc, cmap='gray')
-    ax[1].set_title(f'RC Threshold Binary Image (Threshold: {rc_thresh})')
+    ax[1].set_title(f'RC Threshold Binary Image (Threshold: {rc_thresh:.2f})')
     ax[1].axis('off')
 
     # Display RC threshold binary image after morphological closing
@@ -210,9 +61,7 @@ def display_rc_closing_results(im_gray, rc_thresh, bin_rc, closed_image):
     plt.tight_layout()
     plt.show()
 
-# New Code Block
-
-def is_contour_enclosing_white_region(contour, image):  # TODO: rename to avoid using ambiguous colors
+def is_contour_enclosing_masked_region(contour, image):  # TODO: rename to avoid using ambiguous colors
     """Check if a contour is enclosing a white region."""
     # Create a mask for the contour
     mask = np.zeros(image.shape, dtype=bool)
@@ -231,19 +80,15 @@ def is_contour_enclosing_white_region(contour, image):  # TODO: rename to avoid 
 def normalize_and_find_contours(closing, contour_level=0.8):
     """Normalize the closing result and find contours."""
     
-    # Normalize the closing result to values between 0 and 1
-    normalized_closing = closing / 255.0
-
-    # Find contours at a constant value (e.g., 0.8)
-    contours = measure.find_contours(normalized_closing, contour_level)
-
+    normalized_closing = closing / 255.0  # Normalize the closing result to values between 0 and 1
+    contours = measure.find_contours(normalized_closing, contour_level)  # Find contours at a constant value (e.g., 0.8)
     return contours
 
 def filter_and_remove_white_region_contours(closing, contours):
     """Filter and remove contours that enclose white regions."""
     filtered_contours = []
     for contour in contours:
-        if not is_contour_enclosing_white_region(contour, closing):
+        if not is_contour_enclosing_masked_region(contour, closing):
             filtered_contours.append(contour)
     return filtered_contours
 
@@ -255,7 +100,6 @@ def display_contours(closing, contours):  # TODO: closing is very vague for para
     fig, ax = plt.subplots(figsize=(8, 8))
     ax.imshow(closing, cmap=plt.cm.gray)  # Display the closing result in grayscale
 
-    # Loop through the contours and plot them
     for contour in contours:
         ax.plot(contour[:, 1], contour[:, 0], linewidth=2)
 
@@ -264,10 +108,8 @@ def display_contours(closing, contours):  # TODO: closing is very vague for para
     ax.set_yticks([])
     ax.set_title("Contours Detected Using measure.find_contours")
     plt.show()
-    
-# New Code Block
 
-# Function to display the original color image with detected contours overlaid
+
 def display_contours_on_original_color(original_image, contours):
     """Display the original color image with detected contours overlaid."""
     
@@ -284,7 +126,6 @@ def display_contours_on_original_color(original_image, contours):
     ax.set_title("Contours Overlaid on Original Color Image")
     plt.show()    
 
-# New Code Block
 
 # Function to calculate convexity and classify contours into blue, red, and boundary
 def classify_contours_by_convexity(image_shape, contours, convexity_threshold=0.865):
@@ -350,7 +191,6 @@ def display_classified_contours_on_original_color(original_image, blue_contours,
     ax.set_title("Classified Contours (Blue: Convex, Red: Non-Convex, Green: Boundary)")
     plt.show()
     
-# New Code Block
 
 def overlay_min_bounding_box_and_aspect_ratio(original_image, contours, label_color):
     """
@@ -471,7 +311,6 @@ def process_and_overlay_if_few_contours(original_image, blue_contours, red_conto
 
     return all_aspect_ratios, all_areas
 
-# New Code Block
 
 def process_blue_contours(image_gray, original_image, blue_contours):
     """Calculate areas and aspect ratios for blue contours and draw bounding rectangles."""
@@ -551,7 +390,6 @@ def process_blue_contours(image_gray, original_image, blue_contours):
 
     return areas, aspect_ratios
 
-# New Code Block
 
 # Function to plot top-and-bottom histograms with KDE curves, identify peaks, and overlay standard deviation
 def plot_top_bottom_histograms_with_peak_curve_and_std(areas, aspect_ratios):
@@ -603,7 +441,6 @@ def plot_top_bottom_histograms_with_peak_curve_and_std(areas, aspect_ratios):
 
     return peak_area, peak_ar, mean_area, std_area, mean_ar, std_ar
 
-# New Code Block
 
 def filter_and_overlay_all_contours_with_upper_limit(  # TODO: function is too long
     original_image, image_gray, blue_contours, red_contours, green_contours, mean_area, std_dev_area, peak_area, length_per_pixel
@@ -746,7 +583,6 @@ def filter_and_overlay_all_contours_with_upper_limit(  # TODO: function is too l
 
     return filtered_blue_contours, blue_contour_areas, filtered_red_contours, filtered_green_contours, blue_aspect_ratios
 
-# New Code Block
 
 def remove_edge_touching_contours_and_display(contours, image_gray, original_image, color):
     """Remove contours that touch the edges of the image and display them."""
@@ -784,7 +620,6 @@ def remove_edge_touching_contours_and_display(contours, image_gray, original_ima
 
     return filtered_contours
 
-# New Code Block
 
 def plot_bounding_boxes_and_calculate_contour_area(contours, original_image, mean_area, length_per_pixel, color="red"):
     """
@@ -863,7 +698,6 @@ def plot_bounding_boxes_and_calculate_contour_area(contours, original_image, mea
 
     return contour_areas
 
-# New Code Block
 
 def plot_bounding_boxes_and_display_contour_areas(contours, original_image, length_per_pixel, mean_area, color="red"):
     """
@@ -947,7 +781,6 @@ def plot_bounding_boxes_and_display_contour_areas(contours, original_image, leng
 
     return contour_areas
 
-# new Code Block
 
 def create_summary_table(
     aspect_ratios_single,
@@ -1003,7 +836,6 @@ def create_summary_table(
 
     return summary_table
 
-# New Code Block
 
 # Function to calculate the standard deviation
 def calculate_summary_with_std(aspect_ratios_single, areas_single, areas_clusters):
