@@ -410,7 +410,8 @@ def overlay_min_bounding_box_and_aspect_ratio(original_image, contours, label_co
 
     return aspect_ratios, areas
 
-
+#TODO (Arthur): Remove the boundary contours from this part
+## Probably can add - count the detected contour at this step if it is less than 2 skip to the last step
 def process_and_overlay_if_few_contours(original_image, blue_contours, red_contours, boundary_contours, length_per_pixel):
     """
     Check if the sum of contours is less than 3. If so, overlay minimum bounding boxes
@@ -436,14 +437,14 @@ def process_and_overlay_if_few_contours(original_image, blue_contours, red_conto
             blue_ar, blue_areas = overlay_min_bounding_box_and_aspect_ratio(
                 original_image, blue_contours, "blue"
             )
-            blue_areas = blue_areas * length_per_pixel
+            blue_areas = np.array(blue_areas) * length_per_pixel
             all_aspect_ratios.extend(blue_ar)
             all_areas.extend(blue_areas)
         if red_contours:
             red_ar, red_areas = overlay_min_bounding_box_and_aspect_ratio(
                 original_image, red_contours, "red"
             )
-            red_areas = red_areas * length_per_pixel
+            red_areas = np.array(red_areas) * length_per_pixel
             all_aspect_ratios.extend(red_ar)
             all_areas.extend(red_areas)
         if boundary_contours:
@@ -540,6 +541,7 @@ def process_blue_contours(image_gray, original_image, blue_contours):
 # New Code Block
 
 # Function to plot top-and-bottom histograms with KDE curves, identify peaks, and overlay standard deviation
+#TODO (Arthur): Might remove AR histogram, not using it
 def plot_top_bottom_histograms_with_peak_curve_and_std(areas, aspect_ratios):
     """Plot top and bottom histograms with KDE curves, identify peaks, and overlay standard deviation."""
     fig, axs = plt.subplots(2, 1, figsize=(6, 8), gridspec_kw={'height_ratios': [1, 1]})
@@ -981,7 +983,7 @@ def create_summary_table(
 
     # Create the summary table
     summary_table = pd.DataFrame({
-        "Category": ["Single Crystals", "Clusters"],
+        "Category": ["Isolated Crystals", "Clusters"],
         "Count": [count_single_crystals, count_clusters],
         "Mean Aspect Ratio": [mean_ar_single,  mean_ar_clusters],
         "Mean Area (µm²)": [mean_area_single, mean_area_clusters]
@@ -1024,7 +1026,7 @@ def calculate_summary_with_std(aspect_ratios_single, areas_single, areas_cluster
 
     # Create summary table
     summary_table = pd.DataFrame({
-        "Category": ["Single Crystals","Clusters"],
+        "Category": ["Isolated Crystals","Clusters"],
         "Count": [count_single_crystals, count_clusters],
         "Mean Aspect Ratio": [mean_ar_single, mean_ar_clusters],
         "Std Aspect Ratio": [std_ar_single,  std_ar_clusters],
