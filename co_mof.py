@@ -277,7 +277,7 @@ def classify_contours_by_convexity(image_shape, contours, convexity_threshold=0.
     """Classify contours based on convexity threshold and identify boundary contours."""
     blue_contours = []
     red_contours = []
-    boundary_contours = []
+    # boundary_contours = []
 
     # Create masks for each contour to check for containment
     contour_masks = []
@@ -297,23 +297,23 @@ def classify_contours_by_convexity(image_shape, contours, convexity_threshold=0.
         hull_area = np.sum(hull)
         convexity = contour_area / hull_area
 
-        # Determine if contour is a boundary (contained within another contour)
-        is_boundary = any(
-            np.all(contour_masks[j][mask]) for j in range(len(contours)) if j != i
-        )
+        # # Determine if contour is a boundary (contained within another contour)
+        # is_boundary = any(
+        #     np.all(contour_masks[j][mask]) for j in range(len(contours)) if j != i
+        # )
 
         # Classify based on convexity or add to boundary list
-        if is_boundary:
-            boundary_contours.append(contour)
-        elif convexity > convexity_threshold:
+        # if is_boundary:
+        #     boundary_contours.append(contour)
+        if convexity > convexity_threshold:
             blue_contours.append(contour)
         else:
             red_contours.append(contour)
 
-    return blue_contours, red_contours, boundary_contours
+    return blue_contours, red_contours
 
 # Function to display the original color image with classified contours overlaid
-def display_classified_contours_on_original_color(original_image, blue_contours, red_contours, boundary_contours):
+def display_classified_contours_on_original_color(original_image, blue_contours, red_contours):
     """Display the original color image with classified contours overlaid."""
     fig, ax = plt.subplots(figsize=(8, 8))
     ax.imshow(original_image)  # Display the original color image
@@ -327,18 +327,18 @@ def display_classified_contours_on_original_color(original_image, blue_contours,
         ax.plot(contour[:, 1], contour[:, 0], linewidth=1, color='red', label="Red (Non-Convex)")
 
     # Plot boundary contours in green
-    for contour in boundary_contours:
-        ax.plot(contour[:, 1], contour[:, 0], linewidth=1, color='green', linestyle='--', label="Boundary")
+    # for contour in boundary_contours:
+    #     ax.plot(contour[:, 1], contour[:, 0], linewidth=1, color='green', linestyle='--', label="Boundary")
 
     ax.axis('image')
     ax.set_xticks([])
     ax.set_yticks([])
-    ax.set_title("Classified Contours (Blue: Convex, Red: Non-Convex, Green: Boundary)")
+    ax.set_title("Classified Contours")
     plt.show()
     
 # New Code Block
 
-def overlay_min_bounding_box_and_aspect_ratio(original_image, contours, label_color):
+def overlay_min_bounding_box_and_aspect_ratio(original_image, contours, label_color, length_per_pixel):
     """
     Overlay the minimum bounding box for contours on the original image and calculate the aspect ratio and area.
 
@@ -373,7 +373,7 @@ def overlay_min_bounding_box_and_aspect_ratio(original_image, contours, label_co
             color=label_color,
             linewidth=2,
         )
-
+        
         # Calculate width, height, aspect ratio, and area
         width = np.linalg.norm(box[0] - box[1])
         height = np.linalg.norm(box[1] - box[2])
@@ -384,7 +384,7 @@ def overlay_min_bounding_box_and_aspect_ratio(original_image, contours, label_co
                 continue
             aspect_ratios.append(aspect_ratio)
 
-            area = cv2.contourArea(contour_int)
+            area = cv2.contourArea(contour_int) * length_per_pixel
             areas.append(area)
 
             # Overlay aspect ratio and area
@@ -410,56 +410,43 @@ def overlay_min_bounding_box_and_aspect_ratio(original_image, contours, label_co
 
     return aspect_ratios, areas
 
-
-def process_and_overlay_if_few_contours(original_image, blue_contours, red_contours, boundary_contours, length_per_pixel):
+#TODO (Arthur): Remove the boundary contours from this part
+## Probably can add - count the detected contour at this step if it is less than 2 skip to the last step
+def process_and_overlay_if_few_contours(original_image, contours, length_per_pixel):
     """
     Check if the sum of contours is less than 3. If so, overlay minimum bounding boxes
     and calculate aspect ratios for the corresponding contours.
 
     Parameters:
     - original_image: Original color image.
-    - blue_contours: List of blue (convex) contours.
-    - red_contours: List of red (non-convex) contours.
-    - boundary_contours: List of boundary contours.
+    - contours: List of all contours
 
     Returns:
     - all_aspect_ratios: Combined list of all aspect ratios calculated for the contours.
     - all_areas: Combined list of all areas calculated for the contours.
     """
-    total_contours = len(blue_contours) + len(red_contours) + len(boundary_contours)
     all_aspect_ratios = []
     all_areas = []
+    count = len(contours)
 
-    if total_contours <= 2:
-        print(f"Total contours ({total_contours}) are less than or equal to 2. Processing bounding boxes.")
-        if blue_contours:
-            blue_ar, blue_areas = overlay_min_bounding_box_and_aspect_ratio(
-                original_image, blue_contours, "blue"
-            )
-            blue_areas = blue_areas * length_per_pixel
-            all_aspect_ratios.extend(blue_ar)
-            all_areas.extend(blue_areas)
-        if red_contours:
-            red_ar, red_areas = overlay_min_bounding_box_and_aspect_ratio(
-                original_image, red_contours, "red"
-            )
-            red_areas = red_areas * length_per_pixel
-            all_aspect_ratios.extend(red_ar)
-            all_areas.extend(red_areas)
-        if boundary_contours:
-            green_ar, green_areas = overlay_min_bounding_box_and_aspect_ratio(
-                original_image, boundary_contours, "green"
-            )
-            all_aspect_ratios.extend(green_ar)
-            all_areas.extend(green_areas)
+    if count <= 2:
+        print(f"Total contours {count}) are less than or equal to 2. Processing bounding boxes.")
+        
+        aspect_ratio, area = overlay_min_bounding_box_and_aspect_ratio(
+            original_image, contours, "blue", length_per_pixel
+        )
+        # blue_areas = np.array(blue_areas) * length_per_pixel
+        all_aspect_ratios.extend(aspect_ratio)
+        all_areas.extend(area)
+
     else:
-        print(f"Total contours ({total_contours}) are sufficient. Skipping bounding box overlay.")
+        print(f"Total contours ({count}) are sufficient. Skipping bounding box overlay.")
 
     return all_aspect_ratios, all_areas
 
 # New Code Block
 
-def process_blue_contours(image_gray, original_image, blue_contours):
+def process_blue_contours(image_gray, original_image, contours):
     """Calculate areas and aspect ratios for blue contours and draw bounding rectangles."""
     
     # Lists to store areas and aspect ratios
@@ -470,7 +457,7 @@ def process_blue_contours(image_gray, original_image, blue_contours):
     fig, ax = plt.subplots(figsize=(8, 8))
     ax.imshow(original_image)
 
-    for idx, contour in enumerate(blue_contours):
+    for idx, contour in enumerate(contours):
         # Create a binary mask for the contour
         mask = np.zeros(image_gray.shape, dtype=bool)
         rr, cc = polygon(contour[:, 0], contour[:, 1], shape=image_gray.shape)
@@ -507,27 +494,9 @@ def process_blue_contours(image_gray, original_image, blue_contours):
             aspect_ratio = 0  # Assign default value for invalid aspect ratio
         aspect_ratios.append(aspect_ratio)
         
-        # # Calculate the center of the bounding rectangle to overlay aspect ratio
-        # x_center = np.mean([box[i][1] for i in range(4)])
-        # y_center = np.mean([box[i][0] for i in range(4)])
-        
-        # # Overlay aspect ratio on the image
-        # ax.text(
-        #     x_center,
-        #     y_center,
-        #     f"{aspect_ratio:.2f}",
-        #     color='blue',
-        #     fontsize=8,
-        #     ha='center',
-        #     va='center',
-        #     bbox=dict(facecolor='white', alpha=0.5, edgecolor='none'),
-        # )
 
-        # Debugging: Print current index, area, and aspect ratio
-        # print(f"Contour {idx}: Area = {area}, Aspect Ratio = {aspect_ratio}")
-
-    # Final debug check
-    print(f"Total areas: {len(areas)}, Total aspect ratios: {len(aspect_ratios)}")
+    # # Final debug check
+    # print(f"Total areas: {len(areas)}, Total aspect ratios: {len(aspect_ratios)}")
     
     ax.axis('image')
     ax.set_xticks([])
@@ -537,70 +506,84 @@ def process_blue_contours(image_gray, original_image, blue_contours):
 
     return areas, aspect_ratios
 
-# New Code Block
-
 # Function to plot top-and-bottom histograms with KDE curves, identify peaks, and overlay standard deviation
-def plot_top_bottom_histograms_with_peak_curve_and_std(areas, aspect_ratios):
-    """Plot top and bottom histograms with KDE curves, identify peaks, and overlay standard deviation."""
-    fig, axs = plt.subplots(2, 1, figsize=(6, 8), gridspec_kw={'height_ratios': [1, 1]})
+def plot_area_histogram_with_peak_curve(areas):
+    """Plot area histograms with KDE curves, identify peaks, and overlay standard deviation."""
+    fig, ax = plt.subplots(figsize=(6, 4))
 
-    # Top histogram: Areas
-    axs[0].hist(areas, bins=200, color='blue', alpha=0.7, density=True, label="Histogram")
+    # Histogram: Areas
+    ax.hist(areas, bins=200, color='blue', alpha=0.7, density=True, label="Histogram")
     # Calculate KDE curve
     kde_area = gaussian_kde(areas)
     x_area = np.linspace(min(areas), max(areas), 1000)
     y_area = kde_area(x_area)
-    axs[0].plot(x_area, y_area, 'r-', label="KDE Curve")
+    ax.plot(x_area, y_area, 'r-', label="KDE Curve")
     # Identify the peak
     peak_area = x_area[np.argmax(y_area)]
-    axs[0].axvline(peak_area, color='black', linestyle='--', label=f"Peak: {peak_area:.2f}")
+    ax.axvline(peak_area, color='black', linestyle='--', label=f"Peak: {peak_area:.2f}")
     # Overlay standard deviation
     mean_area = np.mean(areas)
     std_area = np.std(areas)
-    axs[0].axvline(mean_area - std_area, color='purple', linestyle='--', label=f"Mean - Std Dev: {mean_area - std_area:.2f}")
-    axs[0].axvline(mean_area + std_area, color='orange', linestyle='--', label=f"Mean + Std Dev: {mean_area + std_area:.2f}")
-    axs[0].set_xlabel('Area')
-    axs[0].set_ylabel('Density')
-    axs[0].set_title('Histogram of Blue Contour Areas with Peak Curve and Std Dev')
-    axs[0].legend()
-
-    # Bottom histogram: Aspect Ratios
-    axs[1].hist(aspect_ratios, bins=200, color='green', alpha=0.7, density=True, label="Histogram")
-    # Calculate KDE curve
-    kde_ar = gaussian_kde(aspect_ratios)
-    x_ar = np.linspace(min(aspect_ratios), max(aspect_ratios), 1000)
-    y_ar = kde_ar(x_ar)
-    axs[1].plot(x_ar, y_ar, 'r-', label="KDE Curve")
-    # Identify the peak
-    peak_ar = x_ar[np.argmax(y_ar)]
-    axs[1].axvline(peak_ar, color='black', linestyle='--', label=f"Peak: {peak_ar:.2f}")
-    # Overlay standard deviation
-    mean_ar = np.mean(aspect_ratios)
-    std_ar = np.std(aspect_ratios)
-    axs[1].axvline(mean_ar - std_ar, color='purple', linestyle='--', label=f"Mean - Std Dev: {mean_ar - std_ar:.2f}")
-    axs[1].axvline(mean_ar + std_ar, color='orange', linestyle='--', label=f"Mean + Std Dev: {mean_ar + std_ar:.2f}")
-    axs[1].set_xlabel('Aspect Ratio')
-    axs[1].set_ylabel('Density')
-    axs[1].set_title('Histogram of Blue Contour Aspect Ratios with Peak Curve and Std Dev')
-    axs[1].legend()
+    ax.axvline(mean_area - std_area, color='purple', linestyle='--', label=f"Mean - Std Dev: {mean_area - std_area:.2f}")
+    ax.axvline(mean_area + std_area, color='orange', linestyle='--', label=f"Mean + Std Dev: {mean_area + std_area:.2f}")
+    ax.set_xlabel('Area')
+    ax.set_ylabel('Density')
+    ax.set_title('Histogram of Blue Contour Areas')
+    ax.legend()
 
     plt.tight_layout()
     plt.show()
 
-    return peak_area, peak_ar, mean_area, std_area, mean_ar, std_ar
+    return peak_area, mean_area, std_area
 
-# New Code Block
+def calculate_contour_area_in_pixel(contour, image_shape):
+    """
+    Calculate the area of a contour using a boolean mask.
+
+    Parameters:
+    - contour: The contour points as a NumPy array of shape (N, 2).
+    - image_shape: The shape of the reference image (height, width).
+
+    Returns:
+    - area: The calculated area of the contour.
+    """
+    mask = np.zeros(image_shape, dtype=bool)
+    rr, cc = polygon(contour[:, 0], contour[:, 1], shape=image_shape)
+    mask[rr, cc] = True
+    return np.sum(mask)
+
+def overlay_area_AND_aspect_ratio(ax, top_left_x, top_left_y, area, aspect_ratio, color="blue"):
+    """
+    Overlay the area and aspect ratio beside the bounding box in a plot.
+
+    Parameters:
+    - ax: Matplotlib axis object where the text will be drawn.
+    - top_left_x: X-coordinate of the top-left corner of the bounding box.
+    - top_left_y: Y-coordinate of the top-left corner of the bounding box.
+    - area: The area of the contour.
+    - aspect_ratio: The aspect ratio of the contour.
+    - color: Color of the text (default is "blue").
+    """
+    ax.text(
+        top_left_x + 100,  # Slightly right of the box
+        top_left_y,  # Slightly above the box
+        f"Area: {area:.2f}\nAR: {aspect_ratio:.2f}",
+        color=color,
+        fontsize=8,
+        ha="right",  # Align text to the right
+        va="bottom",  # Align text at the bottom
+        bbox=dict(facecolor="white", alpha=0.7, edgecolor="none"),
+    )
 
 def filter_and_overlay_all_contours_with_upper_limit(  # TODO: function is too long
-    original_image, image_gray, blue_contours, red_contours, green_contours, mean_area, std_dev_area, peak_area, length_per_pixel
+    original_image, image_gray, blue_contours, red_contours, mean_area, std_dev_area, length_per_pixel
 ):
-    """Filter blue, red, and green (boundary) contours based on area range and overlay them."""
+    """Filter blue, and red, contours based on area range and overlay them."""
     filtered_blue_contours = []
     filtered_red_contours = []
-    filtered_green_contours = []
     blue_aspect_ratios = []  # List to store aspect ratios of blue contours
     blue_contour_areas = []
-    upper_limit = mean_area + std_dev_area + 300000  # Value 50000 from trial and error
+    upper_limit = mean_area + std_dev_area + 300000  # Value 30000 from trial and error
     min_area = mean_area  # Minimum area as mean_area or peak_area (if there are a lot of impurities)
 
     img_height, img_width = image_gray.shape  # Image dimensions
@@ -611,13 +594,7 @@ def filter_and_overlay_all_contours_with_upper_limit(  # TODO: function is too l
 
     # Filter blue contours based on area range
     for contour in blue_contours:
-        # Create a binary mask for the contour
-        mask = np.zeros(image_gray.shape, dtype=bool)
-        rr, cc = polygon(contour[:, 0], contour[:, 1], shape=image_gray.shape)
-        mask[rr, cc] = True
-
-        # Calculate area
-        area = np.sum(mask)
+        area = calculate_contour_area_in_pixel(contour, image_gray.shape)
 
         # Convert contour to integer format for OpenCV
         contour_int = np.array(contour, dtype=np.int32)
@@ -655,59 +632,20 @@ def filter_and_overlay_all_contours_with_upper_limit(  # TODO: function is too l
             blue_aspect_ratios.append(aspect_ratio)
             
             filtered_blue_contours.append(contour)
-            blue_contour_areas.append(area)  # Store the area of the contour
-            
             area = area * length_per_pixel
-
-            # # Calculate center of the bounding box
-            # x_center = np.mean([box[i][1] for i in range(4)])
-            # y_center = np.mean([box[i][0] for i in range(4)])
-
-            # # Overlay area and aspect ratio on the image
-            # ax.text(
-            #     x_center,
-            #     y_center,
-            #     f"Area:{area:.0f}\n AR:{aspect_ratio:.2f}",
-            #     color="blue",
-            #     fontsize=8,
-            #     ha="center",
-            #     va="center",
-            #     bbox=dict(facecolor="white", alpha=0.7, edgecolor="none"),
-            # )
+            blue_contour_areas.append(area)
             
             # Calculate a position beside the bounding box (top-left corner of the box)
             top_left_x = np.min([point[1] for point in box])
             top_left_y = np.min([point[0] for point in box])
 
-            # Overlay the area and aspect ratio beside the bounding box
-            ax.text(
-                top_left_x+100,  # Slightly left of the box
-                top_left_y,  # Slightly above the box
-                f"Area: {area:.2f}\nAR: {aspect_ratio:.2f}",
-                color="blue",
-                fontsize=8,
-                ha="right",  # Align text to the right
-                va="bottom",  # Align text at the bottom
-                bbox=dict(facecolor="white", alpha=0.7, edgecolor="none"),
-            )
-            
-            
+            overlay_area_AND_aspect_ratio(ax, top_left_x, top_left_y, area, aspect_ratio)
 
     # Filter red contours based on area range
     for contour in red_contours:
-        mask = np.zeros(image_gray.shape, dtype=bool)
-        rr, cc = polygon(contour[:, 0], contour[:, 1], shape=image_gray.shape)
-        mask[rr, cc] = True
-        area = np.sum(mask)
+        area = calculate_contour_area_in_pixel(contour, image_gray.shape)
         if area >= min_area:
             filtered_red_contours.append(contour)
-
-    # Filter green contours (boundary) based on area range
-    for contour in green_contours:
-        mask = np.zeros(image_gray.shape, dtype=bool)
-        rr, cc = polygon(contour[:, 0], contour[:, 1], shape=image_gray.shape)
-        mask[rr, cc] = True
-        filtered_green_contours.append(contour)
 
     # Plot filtered blue contours
     for contour in filtered_blue_contours:
@@ -716,10 +654,6 @@ def filter_and_overlay_all_contours_with_upper_limit(  # TODO: function is too l
     # Plot filtered red contours
     for contour in filtered_red_contours:
         ax.plot(contour[:, 1], contour[:, 0], linewidth=1, color="red", label="Red Contours")
-
-    # Plot filtered green contours
-    for contour in filtered_green_contours:
-        ax.plot(contour[:, 1], contour[:, 0], linewidth=1, color="green", label="Green Contours")
 
     min_area = min_area * length_per_pixel
     upper_limit = upper_limit * length_per_pixel
@@ -730,15 +664,13 @@ def filter_and_overlay_all_contours_with_upper_limit(  # TODO: function is too l
     ax.set_title(f"Filtered Contours with {min_area:.2f} ≤ Area ≤ {upper_limit:.2f} in µm²")
     plt.show()
 
-    return filtered_blue_contours, blue_contour_areas, filtered_red_contours, filtered_green_contours, blue_aspect_ratios
+    return filtered_blue_contours, blue_contour_areas, filtered_red_contours,  blue_aspect_ratios
 
 # New Code Block
-
 def remove_edge_touching_contours_and_display(contours, image_gray, original_image, color):
     """Remove contours that touch the edges of the image and display them."""
     img_height, img_width = image_gray.shape
     filtered_contours = []
-    edge_touching_contours = []  # Store contours that are removed
 
     fig, ax = plt.subplots(figsize=(8, 8))
     ax.imshow(original_image)
@@ -758,9 +690,6 @@ def remove_edge_touching_contours_and_display(contours, image_gray, original_ima
         if not touches_edge:
             filtered_contours.append(contour)
             ax.plot(contour[:, 1], contour[:, 0], linewidth=1, color="red", label=f"Filtered {color} Contours")
-        else:
-            edge_touching_contours.append(contour)
-            ax.plot(contour[:, 1], contour[:, 0], linewidth=1, color="yellow", label=f"Removed {color} Contours")
 
     ax.axis("image")
     ax.set_xticks([])
@@ -769,8 +698,6 @@ def remove_edge_touching_contours_and_display(contours, image_gray, original_ima
     plt.show()
 
     return filtered_contours
-
-# New Code Block
 
 def plot_bounding_boxes_and_calculate_contour_area(contours, original_image, mean_area, length_per_pixel, color="red"):
     """
@@ -851,146 +778,6 @@ def plot_bounding_boxes_and_calculate_contour_area(contours, original_image, mea
 
 # New Code Block
 
-def plot_bounding_boxes_and_display_contour_areas(contours, original_image, length_per_pixel, mean_area, color="red"):
-    """
-    Plot the minimum bounding boxes for filtered contours, calculate actual contour areas, 
-    and overlay the area values at a non-overlapping corner of the bounding box while ensuring 
-    text is not placed at the edges of the image.
-
-    Parameters:
-    - contours: List of contours to process.
-    - original_image: The original image for overlay.
-    - length_per_pixel: Conversion factor to get area in real units.
-    - mean_area: Mean area to set minimum area threshold.
-    - color: Color for plotting bounding boxes.
-
-    Returns:
-    - contour_areas: List of actual contour areas.
-    """
-    fig, ax = plt.subplots(figsize=(8, 8))
-    ax.imshow(original_image)
-
-    img_height, img_width, _ = original_image.shape  # Get image dimensions
-    contour_areas = []
-    used_positions = []  # List to store used text positions to avoid overlap
-    min_area = mean_area * length_per_pixel  # Convert to real-world units
-
-    for contour in contours:
-        # Convert contour to integer format for OpenCV
-        contour_int = np.array(contour, dtype=np.int32)
-
-        # Get the minimum area bounding box
-        rect = cv2.minAreaRect(contour_int)
-        box = cv2.boxPoints(rect)
-        box = box.astype(np.int32)  # Convert to integer
-
-        # Draw the bounding box on the plot
-        ax.plot([box[i][1] for i in range(4)] + [box[0][1]],
-                [box[i][0] for i in range(4)] + [box[0][0]],
-                color=color, linewidth=1)
-
-        # Calculate the actual area of the contour
-        area = cv2.contourArea(contour_int) * length_per_pixel  # Convert to real-world units
-        contour_areas.append(area)
-
-        # Possible label positions (at the four bounding box corners)
-        possible_positions = [
-            (box[0][1] - 10, box[0][0] - 10),  # Top-left
-            (box[1][1] + 10, box[1][0] - 10),  # Top-right
-            (box[2][1] + 10, box[2][0] + 10),  # Bottom-right
-            (box[3][1] - 10, box[3][0] + 10),  # Bottom-left
-        ]
-
-        # Choose a position that does not overlap with previous labels and is not at the edge
-        for pos_x, pos_y in possible_positions:
-            if (30 < pos_x < img_width - 30 and 30 < pos_y < img_height - 30) and \
-               all(abs(pos_x - used_x) > 40 and abs(pos_y - used_y) > 20 for used_x, used_y in used_positions):
-                selected_x, selected_y = pos_x, pos_y
-                used_positions.append((selected_x, selected_y))
-                break
-        else:
-            # If all positions overlap or are at the edge, adjust position to a safe area
-            selected_x = min(max(box[2][1], 40), img_width - 40)  # Keep within bounds
-            selected_y = min(max(box[2][0], 40), img_height - 40)
-            used_positions.append((selected_x, selected_y))
-
-        # Overlay the area beside the bounding box at the selected corner
-        ax.text(
-            selected_x, selected_y,
-            f"Area: {area:.2f} µm²",
-            color=color,
-            fontsize=8,
-            ha="left",
-            va="top",
-            bbox=dict(facecolor="white", alpha=0.7, edgecolor="none"),
-        )
-
-    ax.axis("image")
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_title(f"Filtered Contours with Area ≥ {min_area:.2f} µm²")
-    plt.show()
-
-    return contour_areas
-
-# new Code Block
-
-def create_summary_table(
-    aspect_ratios_single,
-    areas_single, areas_clusters
-):
-    """
-    Create a summary table with the count of contours, mean aspect ratios, and mean areas for single crystals,
-    overlapping crystals, and clusters.
-
-    Parameters:
-    - single_crystals: List of single crystals.
-    - overlapping_crystals: List of overlapping crystals.
-    - clusters: List of clusters.
-    - aspect_ratios_single: List of aspect ratios for single crystals.
-    - aspect_ratios_overlapping: List of aspect ratios for overlapping crystals.
-    - aspect_ratios_clusters: List of aspect ratios for clusters.
-    - areas_single: List of areas for single crystals.
-    - areas_overlapping: List of areas for overlapping crystals.
-    - areas_clusters: List of areas for clusters.
-
-    Returns:
-    - summary_table: Pandas DataFrame containing the summary.
-    """
-    # Calculate counts
-    count_single_crystals = len(aspect_ratios_single)
-    # count_overlapping_crystals = len(aspect_ratios_overlapping)
-    count_clusters = len(areas_clusters)
-
-    # Calculate mean aspect ratios
-    mean_ar_single = round(np.mean(aspect_ratios_single), 2) if aspect_ratios_single else 0
-    # mean_ar_overlapping = round(np.mean(aspect_ratios_overlapping), 2) if aspect_ratios_overlapping else 0
-    mean_ar_clusters = "-"
-
-    # Calculate mean areas
-    mean_area_single = round(np.mean(areas_single), 2) if areas_single else 0
-    # mean_area_overlapping = round(np.mean(areas_overlapping), 2) if areas_overlapping else 0
-    mean_area_clusters = round(np.mean(areas_clusters), 2) if areas_clusters else 0
-
-    # Calculate totals
-    total_count = count_single_crystals 
-    total_aspect_ratios = aspect_ratios_single 
-    total_mean_ar = round(np.mean(total_aspect_ratios), 2) if total_aspect_ratios else 0
-    # total_areas = areas_single + areas_overlapping 
-    # total_mean_area = round(np.mean(total_areas), 2) if total_areas else 0
-
-    # Create the summary table
-    summary_table = pd.DataFrame({
-        "Category": ["Single Crystals", "Clusters"],
-        "Count": [count_single_crystals, count_clusters],
-        "Mean Aspect Ratio": [mean_ar_single,  mean_ar_clusters],
-        "Mean Area (µm²)": [mean_area_single, mean_area_clusters]
-    })
-
-    return summary_table
-
-# New Code Block
-
 # Function to calculate the standard deviation
 def calculate_summary_with_std(aspect_ratios_single, areas_single, areas_clusters):
     """
@@ -1024,7 +811,7 @@ def calculate_summary_with_std(aspect_ratios_single, areas_single, areas_cluster
 
     # Create summary table
     summary_table = pd.DataFrame({
-        "Category": ["Single Crystals","Clusters"],
+        "Category": ["Isolated Crystals","Clusters"],
         "Count": [count_single_crystals, count_clusters],
         "Mean Aspect Ratio": [mean_ar_single, mean_ar_clusters],
         "Std Aspect Ratio": [std_ar_single,  std_ar_clusters],
@@ -1033,3 +820,63 @@ def calculate_summary_with_std(aspect_ratios_single, areas_single, areas_cluster
     })
 
     return summary_table
+
+def plot_summary_bar_chart(summary_table, area_scaling_factor=1e3):
+    """
+    Plots a grouped bar chart for Count, Mean Aspect Ratio, and Mean Area from a summary table.
+
+    Parameters:
+    - summary_table: Pandas DataFrame containing "Category", "Count", "Mean Aspect Ratio", and "Mean Area (µm²)".
+    - area_scaling_factor: Factor to scale the Mean Area values for better visualization (default: 1e3).
+    """
+    # Extract data
+    categories = summary_table["Category"][::-1]
+    counts = summary_table["Count"][::-1]
+    mean_aspect_ratios = summary_table["Mean Aspect Ratio"][::-1]
+    mean_areas = summary_table["Mean Area (µm²)"][::-1]
+
+    # Define bar positions and width
+    bar_width = 0.25
+    indices = np.arange(len(categories))
+
+    # Convert Mean Aspect Ratio and Mean Area to floats, handling non-numeric values like "-"
+    mean_aspect_ratios = [float(val) if val != "-" else 0 for val in mean_aspect_ratios]
+    mean_areas = [float(val) if val != "-" else 0 for val in mean_areas]
+
+    # Normalize Mean Area for better visualization
+    mean_areas_scaled = [area / area_scaling_factor for area in mean_areas]
+
+    # Plot grouped vertical bar chart
+    fig, ax = plt.subplots(figsize=(8, 8))
+
+    # Add bars for Count
+    bars_count = ax.bar(indices - bar_width, counts, width=bar_width, color='thistle', label='Count')
+
+    # Add bars for Mean Aspect Ratio
+    bars_aspect = ax.bar(indices, mean_aspect_ratios, width=bar_width, color='steelblue', label='Mean Aspect Ratio')
+
+    # Add bars for Mean Area (scaled)
+    bars_area = ax.bar(indices + bar_width, mean_areas_scaled, width=bar_width, color='coral', label=r"Mean Area ($\times10^3$ µm$^2$)")
+
+    # Add text labels
+    for bars, data in zip([bars_count, bars_aspect, bars_area], [counts, mean_aspect_ratios, mean_areas_scaled]):
+        for bar, value in zip(bars, data):
+            if value != 0:  # Ignore labels for bars with a value of 0
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2,  # Center text horizontally on the bar
+                    bar.get_height() + 0.05,  # Position slightly above the bar
+                    f"{value:.2f}" if isinstance(value, float) else f"{int(value)}",  # Format the text
+                    ha='center', fontsize=15
+                )
+
+    # Add labels and legend
+    ax.set_ylabel("Values", fontsize=17)
+    ax.set_xticks(indices)
+    ax.set_xticklabels(categories, fontsize=17, rotation=45)
+    ax.tick_params(axis='y', labelsize=17)
+    ax.legend(fontsize=17, loc='best')
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+
+    # Adjust layout and show plot
+    plt.tight_layout()
+    plt.show()
