@@ -2,14 +2,15 @@ import easyocr
 import re
 import cv2
 import numpy as np
+from skimage import measure
 from matplotlib import pyplot as plt
 
-from co_mof_image_utils import load_rgb_image
+from co_mof_image_utils import load_rgb_image, grayscale_image, apply_rc_thresholding
 
 
 class ScaleBarDetector:
-    def __init__(self, image_path: str):
-        self.image_path = image_path
+    def __init__(self, image_src: str):
+        self.image_src = image_src
         self.physical_length = None
         self.units = None
         self.pixel_length = None
@@ -33,7 +34,7 @@ class ScaleBarDetector:
                         or None if no match is found.
         """
         reader = easyocr.Reader(['en'])
-        results = reader.readtext(self.image_path)
+        results = reader.readtext(self.image_src)
         
         # Regex pattern: one or more digits (the numerical length), optional whitespace, followed by one or more letters (the units)
         pattern = r'\b(\d+)\s*([a-zA-Z]+)\b'
@@ -60,12 +61,18 @@ class ScaleBarDetector:
             self.confidence = best_match['confidence']
             self.physical_length = best_match['physical_length']
             self.text_bbox = best_match['bounding_box']
-            self.scale_bar_bbox = self.detect_scale_bar()
-            if self.scale_bar_bbox is not None:
-                scale_bar_length = max(get_bbox_dimensions(self.scale_bar_bbox))
-                self.units_per_pixel = self.physical_length / scale_bar_length
+            # self.scale_bar_bbox = self.detect_scale_bar()
+            self.units_per_pixel = self.get_pixel_per_units()
+            # if self.scale_bar_bbox is not None:
+                # scale_bar_length = max(get_bbox_dimensions(self.scale_bar_bbox))
+                # self.units_per_pixel = self.physical_length / scale_bar_length
 
-    def detect_scale_bar(self):
+    def get_pixel_per_units(self):
+        _, rc_mask = apply_rc_thresholding(grayscale_image(load_rgb_image(self.image_src)))
+        return get_length_per_pixel(rc_mask, actual_length_micrometers=self.physical_length)
+
+
+    def __detect_scale_bar(self):
         """
         Detects the scale bar in a microscopic image.
         
@@ -80,7 +87,7 @@ class ScaleBarDetector:
                 [np.int32(x4), np.int32(y4)]]
         """
         # Load the image
-        image = cv2.imread(self.image_path)
+        image = cv2.imread(self.image_src)
         
         # Convert to grayscale
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -127,7 +134,7 @@ class ScaleBarDetector:
         """
         Loads an image, overlays the text and rectangle bounding boxes, and displays the image.
         """
-        image = load_rgb_image(self.image_path)
+        image = load_rgb_image(self.image_src)
         if image is None:
             print("Error: Unable to load image.")
             return
@@ -177,3 +184,106 @@ def get_bbox_dimensions(bbox):
     height = (height_left + height_right) / 2.0
     
     return width, height
+
+
+# original code
+def get_length_per_pixel(rc_mask, actual_length_micrometers=200):
+    _, longest_line = get_distance_per_pixel_using_longest_contour(rc_mask)
+    if longest_line:
+        x1, y1, x2, y2 = longest_line
+        length_in_pixels = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+        length_per_pixel = actual_length_micrometers / length_in_pixels
+        return length_per_pixel
+    
+def get_distance_per_pixel_using_longest_contour(rc_mask):
+    # Detect all contours in the binary image using skimage
+    contours = measure.find_contours(rc_mask, level=0.8)
+
+    # Detect horizontal lines in contours
+    horizontal_lines = detect_horizontal_lines(contours)
+
+    # Combine horizontal lines that are close to each other
+    combined_lines = combine_close_lines(horizontal_lines, pixel_tolerance=5)
+
+    # Overlay combined horizontal lines on the binary image and highlight the longest in red
+    overlay_image, longest_line = overlay_horizontal_lines(rc_mask, combined_lines)
+    
+    return overlay_image, longest_line
+
+# Function to detect horizontal straight lines for every contour
+def detect_horizontal_lines(contours, slope_tolerance=0.01):
+    horizontal_lines = []
+
+    # Iterate through contours
+    for idx, contour in enumerate(contours):
+        # Contour points
+        x_coords, y_coords = contour[:, 1], contour[:, 0]
+
+        # Pairwise line segments
+        for i in range(len(x_coords) - 1):
+            x1, y1 = x_coords[i], y_coords[i]
+            x2, y2 = x_coords[i + 1], y_coords[i + 1]
+
+            # Avoid division by zero and compute slope
+            if abs(x2 - x1) > 1e-6:
+                slope = (y2 - y1) / (x2 - x1)
+            else:
+                slope = np.inf
+
+            # Check if the line is horizontal (slope close to 0)
+            if abs(slope) <= slope_tolerance:
+                horizontal_lines.append(((x1, y1), (x2, y2)))
+
+    return horizontal_lines
+
+
+# Function to overlay combined horizontal lines and highlight the longest in red
+def overlay_horizontal_lines(binary_image, combined_lines):
+    # Convert binary image to a 3-channel image for visualization
+    overlay_image = np.dstack([binary_image * 255] * 3).astype(np.uint8)
+
+    # Find the longest line
+    longest_line = None
+    if combined_lines:
+        longest_line = max(combined_lines, key=lambda line: np.sqrt((line[2] - line[0])**2 + (line[3] - line[1])**2))
+        (x1, y1, x2, y2) = longest_line
+
+        # Highlight the longest line in red
+        cv2.line(overlay_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 3)  # Red line
+
+        # Plot starting and ending points of the longest line
+        cv2.circle(overlay_image, (int(x1), int(y1)), 15, (255, 0, 0), -1)  # Start point in red
+        cv2.circle(overlay_image, (int(x2), int(y2)), 15, (0, 0, 255), -1)  # End point in blue
+
+    # Draw all other combined lines in green
+    for (x1, y1, x2, y2) in combined_lines:
+        if (x1, y1, x2, y2) != longest_line:
+            cv2.line(overlay_image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 3)  # Green lines
+
+    return overlay_image, longest_line
+
+
+# Function to combine horizontal lines that are within 5 pixels
+def combine_close_lines(horizontal_lines, pixel_tolerance=5):
+    combined_lines = []
+
+    # Sort lines by their starting y-coordinate
+    horizontal_lines.sort(key=lambda line: line[0][1])
+
+    for line in horizontal_lines:
+        x1, y1, x2, y2 = *line[0], *line[1]
+
+        if not combined_lines:
+            combined_lines.append((x1, y1, x2, y2))
+        else:
+            # Check proximity with the last combined line
+            cx1, cy1, cx2, cy2 = combined_lines[-1]
+
+            if abs(y1 - cy1) <= pixel_tolerance and (min(x2, cx2) - max(x1, cx1)) >= -pixel_tolerance:
+                # Merge lines if they are close
+                combined_lines[-1] = (min(x1, cx1), min(y1, cy1), max(x2, cx2), max(y2, cy2))
+            else:
+                # Otherwise, add as a new line
+                combined_lines.append((x1, y1, x2, y2))
+
+    return combined_lines

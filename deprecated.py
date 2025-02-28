@@ -62,6 +62,19 @@ def get_distance_per_pixel_using_longest_contour(rc_mask):
     # Overlay combined horizontal lines on the binary image and highlight the longest in red
     overlay_image, longest_line = overlay_horizontal_lines(rc_mask, combined_lines)
     
+    return overlay_image, longest_line
+
+def get_length_per_pixel(rc_mask, actual_length_micrometers=200, debug_display=False):
+    overlay_image, longest_line = get_distance_per_pixel_using_longest_contour(rc_mask)
+    if debug_display:
+        display_overlay(overlay_image)
+
+    if longest_line:
+        x1, y1, x2, y2 = longest_line
+        length_in_pixels = np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+        length_per_pixel = actual_length_micrometers / length_in_pixels
+        return length_per_pixel
+    
     
 # Function to combine horizontal lines that are within 5 pixels
 def combine_close_lines(horizontal_lines, pixel_tolerance=5):
