@@ -1,0 +1,27 @@
+{
+    "Manual": {
+        "steps": [
+            "Measuring and transferring powder",
+            "Placing vials onto the customized 3D-printed 6 well-plate",
+            "Placing the customized 3D-printed 6-well plate onto the Mara platform", 
+            "Closing vials with lids", 
+            "Votexing vial for complete mixing",
+            "Heating vials with a heating Plate", 
+            "Timing"
+        ]
+    },
+    "Manual-Pipette": {
+        "steps": [
+            "Manually pipetting DMF, ethanol, and water into the vial",
+            "Manually mixing solutions via pipetting"
+        ]
+    },
+    "Robotic-Mara": {
+        "steps": [
+            "Recognizing vial positions",
+            "Liquid transferring with precision",
+            "Communicating with Python API", 
+            "Automated mixing via pipetting"
+        ]
+    }
+}

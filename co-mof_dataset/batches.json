@@ -1,0 +1,44 @@
+{
+    "1": {
+        "Manual": true,
+        "Manual-Pipette": false,
+        "Robotic-Mara": true,
+        "Notes": "SolventVolumes-I"
+    },
+    "2": {
+        "Manual": true,
+        "Manual-Pipette": false,
+        "Robotic-Mara": true,
+        "Notes": "TIME"
+    },
+    "3": {
+        "Manual": true,
+        "Manual-Pipette": false,
+        "Robotic-Mara": true,
+        "Notes": "Temperature"
+    },
+    "4": {
+        "Manual": true,
+        "Manual-Pipette": false,
+        "Robotic-Mara": true,
+        "Notes": "Mod-Link"
+    },
+    "5": {
+        "Manual": true,
+        "Manual-Pipette": false,
+        "Robotic-Mara": true,
+        "Notes": "SolventVolumes-II"
+    },
+    "6": {
+        "Manual": true,
+        "Manual-Pipette": false,
+        "Robotic-Mara": true,
+        "Notes": "SolventVolumes-II-RobotRepeat"
+    },
+    "7": {
+        "Manual": true,
+        "Manual-Pipette": true,
+        "Robotic-Mara": false,
+        "Notes": "SolventVolumes-II-PipetteRepeat"
+    }
+}
