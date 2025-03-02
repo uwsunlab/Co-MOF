@@ -1,3 +1,4 @@
+co-mof_dataset/images/*
 dataset/*
 __pycache__/*
 *.pyc
