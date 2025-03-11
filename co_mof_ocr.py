@@ -9,7 +9,7 @@ from co_mof_image_utils import load_rgb_image, grayscale_image, apply_rc_thresho
 
 
 class ScaleBarDetector:
-    def __init__(self, image_src: str):
+    def __init__(self, image_src: str, u2μ=True):
         self.image_src = image_src
         self.physical_length = None
         self.units = None
@@ -18,9 +18,9 @@ class ScaleBarDetector:
         self.text_bbox = None
         self.scale_bar_bbox = None
         self.units_per_pixel = None
-        self.set_scale_bar_attributes()
+        self.set_scale_bar_attributes(u2μ=u2μ)
 
-    def set_scale_bar_attributes(self):
+    def set_scale_bar_attributes(self, u2μ=True):
         """
         Reads the image using EasyOCR, searches for a string that consists of a number followed by letters 
         (representing any unit), and returns the best match (based on OCR confidence) with the bounding box,
@@ -46,6 +46,8 @@ class ScaleBarDetector:
             found = re.findall(pattern, text)
             if found:
                 number_str, units = found[0]
+                if u2μ and units.startswith('u'):
+                    units = 'μ' + units[1:]
                 match = {
                     'bounding_box': bbox,   # List of four (x, y) coordinates.
                     'physical_length': int(number_str),  # Convert the numeric string to an integer.

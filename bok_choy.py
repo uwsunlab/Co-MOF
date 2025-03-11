@@ -32,12 +32,13 @@ class BokChoy:
 
         # Load image and preprocess
         self.image_src = image_src
+        self.scale_bar = ScaleBarDetector(image_src)
         self.image = load_rgb_image(self.image_src)
         self.image_grey = grayscale_image(self.image)
         self.use_overlapping = use_overlapping
         
         # Detect Scale Bar
-        self.length_per_pixel = self._detect_scale_bar(image_src)
+        self.length_per_pixel = self._detect_scale_bar()
 
         # Initialize attributes
         self._initialize_contour_attributes()
@@ -47,11 +48,10 @@ class BokChoy:
         # Run Analysis Pipeline
         self._run_analysis()
             
-    def _detect_scale_bar(self, image_src):
+    def _detect_scale_bar(self):
         """Detect scale bar and determine the length per pixel conversion."""
-        detector = ScaleBarDetector(image_src)
-        if detector.units_per_pixel and detector.units_per_pixel >= 0.1:
-            return detector.units_per_pixel
+        if self.scale_bar.units_per_pixel and self.scale_bar.units_per_pixel >= 0.1:
+            return self.scale_bar.units_per_pixel
         print("[WARNING] Scale bar detection failed. Using default scale: 0.4444 units per pixel.")
         return 0.4444
 
