@@ -2,3 +2,5 @@ co-mof_dataset/images/*
 dataset/*
 __pycache__/*
 *.pyc
+results.csv
+results_summary.csv
