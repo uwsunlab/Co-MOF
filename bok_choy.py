@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import pandas as pd
 
 from co_mof_ocr import ScaleBarDetector
 from co_mof_image_utils import load_rgb_image, grayscale_image, apply_rc_thresholding
@@ -79,6 +80,7 @@ class BokChoy:
         """Runs the main pipeline for contour detection and analysis."""
         self.get_contours()
         self.process_contours()
+        self.collect_results()
 
         if self.config.get("display_all_contour_debug", False):
             self.display_contours_debug()
@@ -216,16 +218,7 @@ class BokChoy:
             
             # Ensure the plot displays the categories in the correct order
             summary_table_with_std = summary_table_with_std.iloc[::-1].reset_index(drop=True)
-
-            # Update category labels to have one word per line for better readability
-            summary_table_with_std["Category"] = summary_table_with_std["Category"].replace({
-                "Isolated Crystals": "Isolated\nCrystals",
-                "Overlapping Crystals": "Overlapping\nCrystals",
-                "Clusters": "Clusters"
-            })
-            
-            # Generate summary bar chart for overlapping case
-            OC_plot_summary_bar_chart(summary_table_with_std)
+            self.results_summary_df = summary_table_with_std.copy()
 
         else:
             # Calculate summary table with standard deviations (without overlapping crystals)
@@ -235,19 +228,51 @@ class BokChoy:
 
             # Ensure the plot displays the categories in the correct order
             summary_table_with_std = summary_table_with_std.iloc[::-1].reset_index(drop=True)
+            self.results_summary_df = summary_table_with_std.copy()
 
+            
+    def display_summary_chart(self):
+        if self.use_overlapping:  # Generate summary bar chart for overlapping case
+            summary = self.results_summary_df.copy()
             # Update category labels to have one word per line for better readability
-            summary_table_with_std["Category"] = summary_table_with_std["Category"].replace({
+            summary["Category"] = summary["Category"].replace({
+                "Isolated Crystals": "Isolated\nCrystals",
+                "Overlapping Crystals": "Overlapping\nCrystals",
+                "Clusters": "Clusters"
+            })
+            OC_plot_summary_bar_chart(summary)
+            
+        else:  # Generate summary bar chart for non-overlapping case
+            summary = self.results_summary_df.copy()
+            # Update category labels to have one word per line for better readability
+            summary["Category"] = summary["Category"].replace({
                 "Isolated Crystals": "Isolated\nCrystals",
                 "Clusters": "Clusters"
             })
-            
-            # Generate summary bar chart for non-overlapping case
-            plot_summary_bar_chart(summary_table_with_std)
-
-            
+            plot_summary_bar_chart(summary)
+ 
+    def save_results_summary_to_csv(self, dst):
+        self.results_summary_df.replace("-", None).to_csv(dst, index=False)
+        print(f'Saved Bok Choy Summary results to {dst}')
         
-
+    def collect_results(self):
+        self.isolated_results_df = pd.DataFrame({'Category': ["Isolated Crystal" for i in range(len(self.isolated_areas))],
+                                                 'Aspect Ratio': self.isolated_aspect_ratios,
+                                                 'Area': self.isolated_areas})
+        self.cluster_results_df = pd.DataFrame({'Category': ["Cluster" for i in range(len(self.clusters_areas))],
+                                                'Area': self.clusters_areas})
+        if not self.use_overlapping:
+            self.results_df = pd.concat([self.isolated_results_df, self.cluster_results_df])
+            return
+        self.overlapping_results_df = pd.DataFrame({'Category': ["Overlapping" for i in range(len(self.overlapping_areas))],
+                                                    'Aspect Ratio': self.overlapping_aspect_ratios,
+                                                    'Area': self.overlapping_areas})
+        self.results_df = pd.concat([self.isolated_results_df, self.cluster_results_df, self.overlapping_results_df])
+    
+    def save_results_to_csv(self, dst):
+        self.results_df.to_csv(dst, index=False)
+        print(f'Saved Bok Choy results to {dst}')
+        
     def display_contours_debug(self):
         """Optional debug visualization for contours."""
     
