@@ -1,0 +1,16 @@
+{
+    "display_all_contour_debug": false,
+    "display_rc_thresholding": false,
+    "display_detected_contours": false,
+    "display_detected_contours_on_original_image": false,
+    "display_classified_contours": false,
+    "display_all_blue_contours": false,
+    "display_area_histogram_for_blue_contours": false,
+    "display_detected_isolated_crystals": false,
+    "display_detected_all_filtered_red_contours": false,
+    "display_detected_clusters": false,
+    "OC_display_grouped_lines" : null,
+    "OC_display_detected_overlapping_crystals" : null,
+    "OC_display_detected_clusters": null
+
+}
