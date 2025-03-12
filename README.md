@@ -1,9 +1,13 @@
 # Co-MOF
 
 ## Environment
-They can be installed using conda.
+They can be installed using conda or a `requirements.txt` file.
+### Using the conda environment file
 1) Install conda
-2) Create a new environment using `conda env create -f environment/conda/environment.linux.yml` Alternatively, you can use `pip install -r environment/requirements.txt` to install dependencies. If creating your own environment, `python >= 3.10` is recommended.
+2) Create a new environment using `conda env create -f environment/conda/environment.linux.yml`
+
+### Using the requirements.txt file
+1) Use `pip install -r environment/requirements.txt` to install dependencies. If creating your own environment, `python >= 3.10` is recommended.
 
 ## Dataset
 The dataset is located in `co-mof_dataset/`, and contains images as well as supporting files
