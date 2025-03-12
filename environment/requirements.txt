@@ -1,8 +1,11 @@
 numpy
 mahotas
 opencv-python
+scikit-learn
 scikit-image
 pandas
 matplotlib
+easyocr
+
 
 jupyterlab
