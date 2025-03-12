@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 
 from co_mof_ocr import ScaleBarDetector
 from co_mof_image_utils import load_rgb_image, grayscale_image, apply_rc_thresholding
@@ -321,4 +322,5 @@ class BokChoy:
                 if self.config.get(key, False):
                     func()
 
-            
+    def show_image(self):
+        plt.imshow(self.image)
