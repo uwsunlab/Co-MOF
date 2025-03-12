@@ -4,3 +4,4 @@ __pycache__/*
 *.pyc
 results.csv
 results_summary.csv
+scratch.ipynb
