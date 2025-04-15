@@ -43,3 +43,21 @@ Here are some examples of images with good, reasonable, and bad expected results
     <img src="assets/images/bad_samples/EVOS_10X_013.jpg" width="600"></img>
     <img src="assets/images/bad_samples/EVOS_20X_013.jpg" width="600"></img>
 </p>
+
+## Citation
+If you use this dataset or Bok Choy in your research, please cite the following:
+
+### BibTeX
+
+```bibtex
+@article{Chong2025,
+  author    = {Chong, Kai Xiang and Alsabia, Qusai and Ye, Zuyang and McDaniel, Andrew and Baumgardner, Douglas and Xiao, Dianne and Sun, Shijing},
+  title     = {Controlling Metal-Organic Framework Crystallization via Computer Vision and Robotic Handling},
+  url       = {http://dx.doi.org/10.26434/chemrxiv-2025-nq31g},
+  DOI       = {10.26434/chemrxiv-2025-nq31g},
+  journal   = {ChemRxiv},
+  year      = {2025},
+}
+```
+
+
