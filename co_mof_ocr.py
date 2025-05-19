@@ -66,8 +66,8 @@ class ScaleBarDetector:
             self.scale_bar_bbox = self.__detect_scale_bar()
             self.units_per_pixel = self.get_pixel_per_units()
             if self.scale_bar_bbox is not None:
-                scale_bar_length = max(get_bbox_dimensions(self.scale_bar_bbox))
-                self.units_per_pixel = self.physical_length / scale_bar_length
+                self.pixel_length = max(get_bbox_dimensions(self.scale_bar_bbox))
+                self.units_per_pixel = self.physical_length / self.pixel_length
 
     def get_pixel_per_units(self):
         _, rc_mask = apply_rc_thresholding(grayscale_image(load_rgb_image(self.image_src)))
