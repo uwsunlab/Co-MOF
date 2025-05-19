@@ -63,11 +63,11 @@ class ScaleBarDetector:
             self.confidence = best_match['confidence']
             self.physical_length = best_match['physical_length']
             self.text_bbox = best_match['bounding_box']
-            # self.scale_bar_bbox = self.detect_scale_bar()
+            self.scale_bar_bbox = self.__detect_scale_bar()
             self.units_per_pixel = self.get_pixel_per_units()
-            # if self.scale_bar_bbox is not None:
-                # scale_bar_length = max(get_bbox_dimensions(self.scale_bar_bbox))
-                # self.units_per_pixel = self.physical_length / scale_bar_length
+            if self.scale_bar_bbox is not None:
+                scale_bar_length = max(get_bbox_dimensions(self.scale_bar_bbox))
+                self.units_per_pixel = self.physical_length / scale_bar_length
 
     def get_pixel_per_units(self):
         _, rc_mask = apply_rc_thresholding(grayscale_image(load_rgb_image(self.image_src)))
