@@ -11,6 +11,7 @@ from co_mof_image_utils import load_rgb_image, grayscale_image, apply_rc_thresho
 class ScaleBarDetector:
     def __init__(self, image_src: str, u2μ=True):
         self.image_src = image_src
+        self.roi_bbox = get_bottom_right_bbox(load_rgb_image(self.image_src))
         self.physical_length = None
         self.units = None
         self.pixel_length = None
@@ -33,8 +34,10 @@ class ScaleBarDetector:
             dict or None: A dictionary with keys 'bounding_box', 'number', 'unit', and 'confidence' for the best match,
                         or None if no match is found.
         """
+        roi_image = crop_from_bbox(load_rgb_image(self.image_src), self.roi_bbox)
+        
         reader = easyocr.Reader(['en'])
-        results = reader.readtext(self.image_src)
+        results = reader.readtext(roi_image)
         
         # Regex pattern: one or more digits (the numerical length), optional whitespace, followed by one or more letters (the units)
         pattern = r'\b(\d+)\s*([a-zA-Z]+)\b'
@@ -62,8 +65,8 @@ class ScaleBarDetector:
             self.units = best_match['units']
             self.confidence = best_match['confidence']
             self.physical_length = best_match['physical_length']
-            self.text_bbox = best_match['bounding_box']
-            self.scale_bar_bbox = self.__detect_scale_bar()
+            self.text_bbox = adjust_bbox_to_image_coords(best_match['bounding_box'], self.roi_bbox[0])
+            self.scale_bar_bbox = adjust_bbox_to_image_coords(self.__detect_scale_bar(), self.roi_bbox[0])
             self.units_per_pixel = self.get_pixel_per_units()
             if self.scale_bar_bbox is not None:
                 self.pixel_length = max(get_bbox_dimensions(self.scale_bar_bbox))
@@ -90,6 +93,7 @@ class ScaleBarDetector:
         """
         # Load the image
         image = cv2.imread(self.image_src)
+        image = crop_from_bbox(image, self.roi_bbox)
         
         # Convert to grayscale
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -104,7 +108,7 @@ class ScaleBarDetector:
             aspect_ratio = w / h if h != 0 else 0
             
             # Heuristic filter: must be a long and thin rectangle
-            if aspect_ratio > 5 and w > 50:
+            if aspect_ratio > 5 and w > 50 and h > 4:
                 # Return bounding box in the required format
                 return [[np.int32(x), np.int32(y)],
                         [np.int32(x + w), np.int32(y)],
@@ -123,7 +127,7 @@ class ScaleBarDetector:
             aspect_ratio = w / h if h != 0 else 0
             
             # Heuristic filter: must be a long and thin rectangle
-            if aspect_ratio > 5 and w > 50:
+            if aspect_ratio > 5 and w > 50 and h > 4:
                 # Return bounding box in the required format
                 return [[np.int32(x), np.int32(y)],
                         [np.int32(x + w), np.int32(y)],
@@ -132,7 +136,7 @@ class ScaleBarDetector:
         
         return None  # Return None if no bar is found
   
-    def debug_display(self):
+    def debug_display(self, crop_to_roi=False):
         """
         Loads an image, overlays the text and rectangle bounding boxes, and displays the image.
         """
@@ -140,6 +144,12 @@ class ScaleBarDetector:
         if image is None:
             print("Error: Unable to load image.")
             return
+        
+        if self.roi_bbox is not None:
+            roi_bbox_arr = np.array(self.roi_bbox, dtype=np.int32)
+            cv2.polylines(image, [roi_bbox_arr], isClosed=True, color=(0, 0, 255), thickness=2)  # Overlay the ROI bounding box
+            cv2.putText(image, "ROI Region", tuple(roi_bbox_arr[0]), cv2.FONT_HERSHEY_SIMPLEX, 
+                        0.7, (0, 0, 255), 2, cv2.LINE_AA)
         
         if self.text_bbox is not None:
             text_bbox_arr = np.array(self.text_bbox, dtype=np.int32)
@@ -154,8 +164,52 @@ class ScaleBarDetector:
                         0.7, (255, 0, 0), 2, cv2.LINE_AA)
         
         plt.figure(figsize=(10, 10))
+        if crop_to_roi:
+            image = crop_from_bbox(image, self.roi_bbox)
         plt.imshow(image)
         plt.show()
+        
+
+def adjust_bbox_to_image_coords(bbox, offset):
+    """
+    Shifts a bounding box from ROI-relative coordinates to full-image coordinates.
+
+    Parameters:
+        bbox (list): List of 4 [x, y] points (OCR-style).
+        offset (tuple): (x_offset, y_offset) — the top-left corner of the ROI in full-image coords.
+
+    Returns:
+        list: Adjusted bounding box in full-image coordinates.
+    """
+    x_offset, y_offset = offset
+    return [[x + x_offset, y + y_offset] for x, y in bbox]
+
+        
+def get_bottom_right_bbox(image, width_ratio=0.5, height_ratio=0.5):
+    h, w = image.shape[:2]
+    x1 = int(w * (1 - width_ratio))
+    y1 = int(h * (1 - height_ratio))
+    x2 = w
+    y2 = h
+
+    bbox = [
+        [x1, y1],  # top-left
+        [x2, y1],  # top-right
+        [x2, y2],  # bottom-right
+        [x1, y2],  # bottom-left
+    ]
+    return bbox
+
+def crop_from_bbox(image, bbox):
+    bbox_np = np.array(bbox, dtype=np.int32)
+
+    # Compute axis-aligned bounding box (min/max x and y)
+    x_min = max(int(np.min(bbox_np[:, 0])), 0)
+    x_max = min(int(np.max(bbox_np[:, 0])), image.shape[1])
+    y_min = max(int(np.min(bbox_np[:, 1])), 0)
+    y_max = min(int(np.max(bbox_np[:, 1])), image.shape[0])
+
+    return image[y_min:y_max, x_min:x_max]
 
 def get_bbox_dimensions(bbox):
     """
