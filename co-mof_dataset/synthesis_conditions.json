@@ -125,15 +125,6 @@
         "DMF (ul)": 2000.0,
         "Ethanol (ul)": 4000.0
     },
-    "Temperature3": {
-        "Temperature (\u00b0C)": 100.0,
-        "Reaction Time (hrs)": 24.0,
-        "Co(NO3)2*6H2O (mg)": 80,
-        "2,5-Dihydroxyterephthalic Acid (mg)": 20,
-        "Water (ul)": 4000.0,
-        "DMF (ul)": 2000.0,
-        "Ethanol (ul)": 4000.0
-    },
     "Temperature4": {
         "Temperature (\u00b0C)": 130.0,
         "Reaction Time (hrs)": 24.0,
