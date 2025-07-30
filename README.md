@@ -51,12 +51,14 @@ If you use this dataset or Bok Choy in your research, please cite the following:
 
 ```bibtex
 @article{Chong2025,
-  author    = {Chong, Kai Xiang and Alsabia, Qusai and Ye, Zuyang and McDaniel, Andrew and Baumgardner, Douglas and Xiao, Dianne and Sun, Shijing},
-  title     = {Controlling Metal-Organic Framework Crystallization via Computer Vision and Robotic Handling},
-  url       = {http://dx.doi.org/10.26434/chemrxiv-2025-nq31g},
-  DOI       = {10.26434/chemrxiv-2025-nq31g},
-  journal   = {ChemRxiv},
-  year      = {2025},
+  title = {Controlling metal–organic framework crystallization via computer vision and robotic handling},
+  ISSN = {2050-7496},
+  url = {http://dx.doi.org/10.1039/D5TA03199K},
+  DOI = {10.1039/d5ta03199k},
+  journal = {Journal of Materials Chemistry A},
+  publisher = {Royal Society of Chemistry (RSC)},
+  author = {Chong,  Kai Xiang and Alsabia,  Qusai Abdulkhaliq and Ye,  Zuyang and McDaniel,  Andrew and Baumgardner,  Douglas and Xiao,  Dianne and Sun,  Shijing},
+  year = {2025}
 }
 ```
 
